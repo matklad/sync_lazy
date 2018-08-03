@@ -1,0 +1,16 @@
+[package]
+name = "sync_lazy"
+version = "0.0.1"
+authors = ["Aleksey Kladov <aleksey.kladov@gmail.com>"]
+license = "MIT OR Apache-2.0"
+
+description = "Thread safe lazy values for Rust."
+readme = "README.md"
+documentation = "https://docs.rs/sync_lazy"
+
+repository = "https://github.com/matklad/sync_lazy"
+keywords = ["lazy", "static"]
+categories = [ "rust-patterns", "memory-management" ]
+
+[dependencies]
+parking_lot = "0.6.3"

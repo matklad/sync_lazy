@@ -1,0 +1,16 @@
+language: rust
+rust:
+  - stable
+  - beta
+  - 1.25.0
+
+script:
+  - cargo test
+  - cargo test --release
+
+matrix:
+  include:
+  - rust: beta
+    script:
+    - cargo test --no-default-features
+    - cargo test --no-default-features --release
