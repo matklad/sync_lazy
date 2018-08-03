@@ -3,10 +3,10 @@ extern crate sync_lazy;
 use sync_lazy::Lazy;
 
 use std::mem;
-use std::thread;
 use std::ptr;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::SeqCst;
+use std::thread;
 
 fn go<F: FnOnce() -> ()>(mut f: F) {
     struct Yolo<T>(T);
@@ -75,7 +75,6 @@ fn sync_lazy_macro() {
     assert_eq!(y, 62);
     assert_eq!(called.load(SeqCst), 1);
 }
-
 
 #[test]
 fn static_lazy() {

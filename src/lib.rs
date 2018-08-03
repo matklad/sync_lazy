@@ -1,8 +1,10 @@
 #[cfg(feature = "parking_lot")]
 extern crate parking_lot;
 
-use std::mem;
 use std::cell::UnsafeCell;
+use std::mem;
+use std::ops::Deref;
+
 #[cfg(feature = "parking_lot")]
 use parking_lot::{Once, ONCE_INIT};
 #[cfg(not(feature = "parking_lot"))]
@@ -10,10 +12,10 @@ use std::sync::{Once, ONCE_INIT};
 
 #[doc(hidden)]
 pub use std::cell::UnsafeCell as __UnsafeCell;
+
 #[doc(hidden)]
 #[cfg(feature = "parking_lot")]
 pub use parking_lot::ONCE_INIT as __ONCE_INIT;
-
 #[doc(hidden)]
 #[cfg(not(feature = "parking_lot"))]
 pub use std::sync::ONCE_INIT as __ONCE_INIT;
@@ -149,7 +151,7 @@ impl<T, F: FnOnce() -> T> Lazy<T, F> {
     }
 }
 
-impl<T, F: FnOnce() -> T> ::std::ops::Deref for Lazy<T, F> {
+impl<T, F: FnOnce() -> T> Deref for Lazy<T, F> {
     type Target = T;
     fn deref(&self) -> &T {
         Lazy::force(self)
