@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "nightly", feature(const_fn))]
+
 #[cfg(feature = "parking_lot")]
 extern crate parking_lot;
 
@@ -104,7 +106,18 @@ impl<T, F: FnOnce() -> T> __State<T, F> {
 impl<T, F: FnOnce() -> T> Lazy<T, F> {
     /// Creates a new lazy value with the given initializing
     /// function.
+    #[cfg(not(feature = "nightly"))]
     pub fn new(f: F) -> Lazy<T, F> {
+        Lazy {
+            __once: ONCE_INIT,
+            __state: UnsafeCell::new(__State::Uninit(f)),
+        }
+    }
+
+    /// Creates a new lazy value with the given initializing
+    /// function.
+    #[cfg(feature = "nightly")]
+    pub const fn new(f: F) -> Lazy<T, F> {
         Lazy {
             __once: ONCE_INIT,
             __state: UnsafeCell::new(__State::Uninit(f)),

@@ -96,3 +96,19 @@ fn lazy_is_sync_send() {
     fn assert_traits<T: Send + Sync>() {}
     assert_traits::<Lazy<String>>();
 }
+
+#[cfg(feature = "nightly")]
+#[test]
+fn new_is_const_fn() {
+    static XS: Lazy<Vec<i32>> = Lazy::new(|| {
+        let mut xs = Vec::new();
+        xs.push(1);
+        xs.push(2);
+        xs.push(3);
+        xs
+    });
+    go(|| {
+        assert_eq!(&*XS, &vec![1, 2, 3]);
+    });
+    assert_eq!(&*XS, &vec![1, 2, 3]);
+}

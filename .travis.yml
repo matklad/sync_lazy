@@ -14,3 +14,6 @@ matrix:
     script:
     - cargo test --no-default-features
     - cargo test --no-default-features --release
+  - rust: nightly
+    script:
+    - cargo test --features=nightly
