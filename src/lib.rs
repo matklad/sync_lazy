@@ -1,3 +1,4 @@
+#[cfg(feature = "parking_lot")]
 extern crate parking_lot;
 
 use std::{
@@ -5,12 +6,20 @@ use std::{
     hint,
     cell::UnsafeCell,
 };
+#[cfg(feature = "parking_lot")]
 use parking_lot::{Once, ONCE_INIT};
+#[cfg(not(feature = "parking_lot"))]
+use std::sync::{Once, ONCE_INIT};
 
 #[doc(hidden)]
 pub use std::cell::UnsafeCell as __UnsafeCell;
 #[doc(hidden)]
+#[cfg(feature = "parking_lot")]
 pub use parking_lot::ONCE_INIT as __ONCE_INIT;
+
+#[doc(hidden)]
+#[cfg(not(feature = "parking_lot"))]
+pub use std::sync::ONCE_INIT as __ONCE_INIT;
 
 /// A value which is initialized on the first access.
 ///
@@ -117,7 +126,16 @@ impl<T, F: FnOnce() -> T> Lazy<T, F> {
     /// assert_eq!(&*lazy, &92);
     /// ```
     pub fn force(this: &Lazy<T, F>) -> &T {
-        this.__once.call_once(|| {
+        let once: &Once = &this.__once;
+
+        #[cfg(not(feature = "parking_lot"))]
+        // Until rustc 1.29.0, `Once::call_once` required a `'static` bound.
+        // That bound was an accident, and https://github.com/rust-lang/rust/pull/52239
+        // removed it without changing implementation at all. To be able to support
+        // older rustc, we just cast to `&'static` here, which should be OK.
+        let once: &'static Once = unsafe { &*(once as *const Once) };
+
+        once.call_once(|| {
             // safe, b/c call_once guarantees exclusive access.
             let state: &mut __State<T, F> = unsafe { &mut *this.__state.get() };
             state.init();

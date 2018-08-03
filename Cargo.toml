@@ -13,4 +13,8 @@ keywords = ["lazy", "static"]
 categories = [ "rust-patterns", "memory-management" ]
 
 [dependencies]
-parking_lot = "0.6.3"
+parking_lot = { version = "0.6.3", optional = true }
+
+[features]
+default = [ "parking_lot" ]
+
