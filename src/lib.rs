@@ -15,12 +15,30 @@ use std::sync::{Once, ONCE_INIT};
 #[doc(hidden)]
 pub use std::cell::UnsafeCell as __UnsafeCell;
 
+// This wrapper makes `Once` private to this crate,
+// which helps to preserve soundness even if the
+// user pokes the hidden `__` fields of the `Lazy`.
 #[doc(hidden)]
-#[cfg(feature = "parking_lot")]
-pub use parking_lot::ONCE_INIT as __ONCE_INIT;
-#[doc(hidden)]
-#[cfg(not(feature = "parking_lot"))]
-pub use std::sync::ONCE_INIT as __ONCE_INIT;
+#[derive(Debug)]
+pub struct __Once(Once);
+
+impl __Once {
+    #[doc(hidden)]
+    pub const INIT: __Once = __Once(ONCE_INIT);
+
+    fn call_once<F: FnOnce()>(&self, f: F) {
+        let once: &Once = &self.0;
+
+        #[cfg(not(feature = "parking_lot"))]
+        // Until rustc 1.29.0, `Once::call_once` required a `'static` bound.
+        // That bound was an accident, and https://github.com/rust-lang/rust/pull/52239
+        // removed it without changing implementation at all. To be able to support
+        // older rustc, we just cast to `&'static` here, which should be OK.
+        let once: &'static Once = unsafe { &*(once as *const Once) };
+        once.call_once(f);
+    }
+}
+
 
 /// A value which is initialized on the first access.
 ///
@@ -68,7 +86,7 @@ pub use std::sync::ONCE_INIT as __ONCE_INIT;
 #[derive(Debug)]
 pub struct Lazy<T, F = fn() -> T> {
     #[doc(hidden)]
-    pub __once: Once,
+    pub __once: __Once,
     #[doc(hidden)]
     pub __state: UnsafeCell<__State<T, F>>,
 }
@@ -109,7 +127,7 @@ impl<T, F: FnOnce() -> T> Lazy<T, F> {
     #[cfg(not(feature = "nightly"))]
     pub fn new(f: F) -> Lazy<T, F> {
         Lazy {
-            __once: ONCE_INIT,
+            __once: __Once::INIT,
             __state: UnsafeCell::new(__State::Uninit(f)),
         }
     }
@@ -119,7 +137,7 @@ impl<T, F: FnOnce() -> T> Lazy<T, F> {
     #[cfg(feature = "nightly")]
     pub const fn new(f: F) -> Lazy<T, F> {
         Lazy {
-            __once: ONCE_INIT,
+            __once: __Once::INIT,
             __state: UnsafeCell::new(__State::Uninit(f)),
         }
     }
@@ -138,16 +156,7 @@ impl<T, F: FnOnce() -> T> Lazy<T, F> {
     /// assert_eq!(&*lazy, &92);
     /// ```
     pub fn force(this: &Lazy<T, F>) -> &T {
-        let once: &Once = &this.__once;
-
-        #[cfg(not(feature = "parking_lot"))]
-        // Until rustc 1.29.0, `Once::call_once` required a `'static` bound.
-        // That bound was an accident, and https://github.com/rust-lang/rust/pull/52239
-        // removed it without changing implementation at all. To be able to support
-        // older rustc, we just cast to `&'static` here, which should be OK.
-        let once: &'static Once = unsafe { &*(once as *const Once) };
-
-        once.call_once(|| {
+        this.__once.call_once(|| {
             // safe, b/c call_once guarantees exclusive access.
             let state: &mut __State<T, F> = unsafe { &mut *this.__state.get() };
             state.init();
@@ -192,7 +201,7 @@ impl<T, F: FnOnce() -> T> Deref for Lazy<T, F> {
 macro_rules! sync_lazy {
     ($($block:tt)*) => {
         $crate::Lazy {
-            __once: $crate::__ONCE_INIT,
+            __once: $crate::__Once::INIT,
             __state: $crate::__UnsafeCell::new(
                 $crate::__State::Uninit(|| { $($block)* })
             ),
