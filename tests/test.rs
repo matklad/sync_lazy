@@ -2,12 +2,11 @@
 extern crate sync_lazy;
 use sync_lazy::Lazy;
 
-use std::{
-    mem,
-    thread,
-    ptr,
-    sync::atomic::{AtomicUsize, Ordering::SeqCst},
-};
+use std::mem;
+use std::thread;
+use std::ptr;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering::SeqCst;
 
 fn go<F: FnOnce() -> ()>(mut f: F) {
     struct Yolo<T>(T);

@@ -1,11 +1,8 @@
 #[cfg(feature = "parking_lot")]
 extern crate parking_lot;
 
-use std::{
-    mem,
-    hint,
-    cell::UnsafeCell,
-};
+use std::mem;
+use std::cell::UnsafeCell;
 #[cfg(feature = "parking_lot")]
 use parking_lot::{Once, ONCE_INIT};
 #[cfg(not(feature = "parking_lot"))]
@@ -142,11 +139,11 @@ impl<T, F: FnOnce() -> T> Lazy<T, F> {
         });
         unsafe {
             let state: &__State<T, F> = &*this.__state.get();
-            match state {
-                __State::Init(value) => value,
+            match *state {
+                __State::Init(ref value) => value,
                 // safe, b/c we've got past call_once,
                 // which sets state to `Init` as the very last step
-                _ => hint::unreachable_unchecked(),
+                _ => unreachable_unchecked(),
             }
         }
     }
@@ -186,4 +183,15 @@ macro_rules! sync_lazy {
             ),
         }
     };
+}
+
+/// Polyfill for std::hint::unreachable_unchecked. There currently exists a
+/// [crate](https://docs.rs/unreachable) for an equivalent to std::hint::unreachable_unchecked, but
+/// sync_lazy currently doesn't include any runtime dependencies and we've chosen to include this
+/// short polyfill rather than include a new crate in every consumer's build.
+///
+/// This should be replaced by std's version when sync_lazy starts to require at least Rust 1.27.
+unsafe fn unreachable_unchecked() -> ! {
+    enum Void {}
+    match std::mem::uninitialized::<Void>() {}
 }
